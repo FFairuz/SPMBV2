@@ -1,0 +1,61 @@
+# ============================================================
+# Virtual Host SPMB untuk Windows + XAMPP
+# Tambahkan isi file ini ke:
+# c:\xampp\apache\conf\extra\httpd-vhosts.conf
+#
+# Ganti "domain-kamu.com" dengan domain asli kamu
+# Ganti path SSL sesuai lokasi sertifikat kamu
+# ============================================================
+
+# Redirect HTTP ke HTTPS
+<VirtualHost *:80>
+    ServerName domain-kamu.com
+    ServerAlias www.domain-kamu.com
+    Redirect permanent / https://domain-kamu.com/
+</VirtualHost>
+
+# HTTPS - Main Config
+<VirtualHost *:443>
+    ServerName domain-kamu.com
+    ServerAlias www.domain-kamu.com
+
+    # SSL Certificate (sesuaikan path sertifikat kamu)
+    SSLEngine on
+    SSLCertificateFile      "C:/xampp/apache/conf/ssl/domain-kamu.com/fullchain.pem"
+    SSLCertificateKeyFile   "C:/xampp/apache/conf/ssl/domain-kamu.com/privkey.pem"
+    # Jika pakai Cloudflare SSL (Origin Certificate), gunakan path file cert dari Cloudflare
+
+    # Serve frontend React (hasil build)
+    DocumentRoot "C:/xampp/htdocs/spmb-v2/frontend/dist"
+
+    <Directory "C:/xampp/htdocs/spmb-v2/frontend/dist">
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        # React Router: arahkan semua ke index.html
+        RewriteEngine On
+        RewriteBase /
+        RewriteRule ^index\.html$ - [L]
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule . /index.html [L]
+    </Directory>
+
+    # Proxy /api/* ke Node.js backend (port 5000)
+    ProxyPreserveHost On
+    ProxyPass /api/ http://localhost:5000/api/
+    ProxyPassReverse /api/ http://localhost:5000/api/
+
+    # Serve folder uploads langsung dari backend
+    Alias /uploads "C:/xampp/htdocs/spmb-v2/backend/uploads"
+    <Directory "C:/xampp/htdocs/spmb-v2/backend/uploads">
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Log
+    ErrorLog "C:/xampp/apache/logs/spmb-error.log"
+    CustomLog "C:/xampp/apache/logs/spmb-access.log" combined
+</VirtualHost>
