@@ -7,11 +7,7 @@ nixPkgs = ["nodejs_20"]
 
 [phases.build]
 cmds = [
-  "npm install --prefix frontend",
-  "npm run build --prefix frontend",
-  "mkdir -p backend/public",
-  "cp -r frontend/dist/. backend/public/",
-  "npm install --prefix backend --production"
+  "npm run build"
 ]
 
 [start]
