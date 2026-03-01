@@ -12,12 +12,13 @@ if (process.env.DATABASE_URL) {
     host:     url.hostname,
     port:     parseInt(url.port) || 3306,
     user:     url.username,
-    password: url.password,
+    password: decodeURIComponent(url.password),
     database: url.pathname.replace('/', ''),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    ssl: { rejectUnauthorized: false },
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    connectTimeout: 10000,
   };
 } else {
   poolConfig = {
@@ -30,19 +31,31 @@ if (process.env.DATABASE_URL) {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    connectTimeout: 10000,
   };
 }
 
 const pool = mysql2.createPool(poolConfig);
+const db = pool.promise();
 
-// Test connection
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('❌ Database connection error:', err.message);
-  } else {
-    console.log('✅ Database terhubung');
-    connection.release();
+// Fungsi test koneksi dengan retry – dipanggil dari server.js
+async function connectWithRetry(maxRetries = 10, delayMs = 3000) {
+  for (let i = 1; i <= maxRetries; i++) {
+    try {
+      const conn = await db.getConnection();
+      conn.release();
+      console.log('✅ Database terhubung');
+      return true;
+    } catch (err) {
+      console.warn(`⏳ Menunggu database... (${i}/${maxRetries}): ${err.message}`);
+      if (i === maxRetries) {
+        console.error('❌ Gagal terhubung ke database setelah', maxRetries, 'percobaan');
+        return false;
+      }
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
   }
-});
+}
 
-module.exports = pool.promise();
+module.exports = db;
+module.exports.connectWithRetry = connectWithRetry;

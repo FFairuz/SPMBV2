@@ -72,6 +72,11 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Server SPMB berjalan di port ${PORT}`);
+
+// Tunggu koneksi database sebelum mulai terima request
+const { connectWithRetry } = require('./config/database');
+connectWithRetry(15, 3000).then(() => {
+  app.listen(PORT, () => {
+    console.log(`✅ Server SPMB berjalan di port ${PORT}`);
+  });
 });
