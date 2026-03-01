@@ -73,9 +73,18 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Tunggu koneksi database sebelum mulai terima request
+// Tunggu koneksi database, inisialisasi tabel, lalu start server
 const { connectWithRetry } = require('./config/database');
-connectWithRetry(15, 3000).then(() => {
+const autoInit = require('./scripts/autoInit');
+
+connectWithRetry(15, 3000).then(async (connected) => {
+  if (connected) {
+    try {
+      await autoInit(db);
+    } catch (e) {
+      console.error('⚠️  autoInit error (tidak fatal):', e.message);
+    }
+  }
   app.listen(PORT, () => {
     console.log(`✅ Server SPMB berjalan di port ${PORT}`);
   });

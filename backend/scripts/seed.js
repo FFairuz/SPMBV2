@@ -5,18 +5,37 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 async function seed() {
-  const conn = await mysql2.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    multipleStatements: true
-  });
+  // Support DATABASE_URL (Railway) atau env var individual
+  let connConfig;
+  if (process.env.DATABASE_URL) {
+    const url = new URL(process.env.DATABASE_URL);
+    connConfig = {
+      host:     url.hostname,
+      port:     parseInt(url.port) || 3306,
+      user:     url.username,
+      password: decodeURIComponent(url.password),
+      database: url.pathname.replace('/', ''),
+      ssl:      { rejectUnauthorized: false },
+      multipleStatements: true,
+    };
+  } else {
+    connConfig = {
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      multipleStatements: true,
+    };
+  }
+
+  const conn = await mysql2.createConnection(connConfig);
 
   console.log('🔧 Membuat database dan tabel...');
 
-  // Buat database
-  await conn.query(`CREATE DATABASE IF NOT EXISTS spmb_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-  await conn.query(`USE spmb_db`);
+  // Buat database hanya jika tidak pakai DATABASE_URL (lokal)
+  if (!process.env.DATABASE_URL) {
+    await conn.query(`CREATE DATABASE IF NOT EXISTS spmb_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    await conn.query(`USE spmb_db`);
+  }
 
   // Hapus tabel lama jika ada (urutan penting karena foreign key)
   await conn.query(`SET FOREIGN_KEY_CHECKS = 0`);
