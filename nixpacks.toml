@@ -1,0 +1,18 @@
+[variables]
+VITE_API_URL = "/api"
+NODE_ENV = "production"
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.build]
+cmds = [
+  "cd frontend && npm install",
+  "cd frontend && npm run build",
+  "mkdir -p backend/public",
+  "cp -r frontend/dist/. backend/public/",
+  "cd backend && npm install --production"
+]
+
+[start]
+cmd = "node backend/server.js"
